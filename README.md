@@ -45,3 +45,7 @@ No terminal, dentro da pasta do projeto:
 
 ```bash
 dotnet run --urls http://localhost:5050
+
+VIDEO DE DEMONSTRAÇÃO (LINK):
+
+https://youtu.be/rj_M4qcEkS4

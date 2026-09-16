@@ -1,11 +1,11 @@
 info:
   name: 05 - Remover
   type: http
-  seq: 6
+  seq: 7
 
 http:
   method: DELETE
-  url: "{{baseUrl}}/api/partidas/2"
+  url: "{{baseUrl}}/api/partidas/9"
   auth: inherit
 
 settings:
