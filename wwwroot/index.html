@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demonstração - Gestão de Partidas de Xadrez</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Barra de aviso de ambiente simulado -->
+  <aside class="demo-disclaimer" role="note" aria-label="Aviso de ambiente de demonstração">
+    <div class="container disclaimer-content">
+      <span class="badge-demo">MODO DE DEMONSTRAÇÃO</span>
+      <p>
+        <strong>Atenção:</strong> Esta interface utiliza exclusivamente dados fictícios em memória local.
+        <strong>Nenhuma requisição é enviada ao backend/API.</strong>
+      </p>
+    </div>
+  </aside>
+
+  <header class="app-header">
+    <div class="container header-content">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">♟</span>
+        <div>
+          <h1>Arena Xadrez</h1>
+          <p class="subtitle">Protótipo Visual de Gerenciamento de Partidas (AP1)</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-layout">
+
+    <!-- Área de feedback acessível -->
+    <div id="feedback-area" class="feedback-area" role="status" aria-live="polite"></div>
+
+    <!-- Painel do Formulário (Adicionar / Editar) -->
+    <section class="card form-section" aria-labelledby="form-heading">
+      <div class="card-header">
+        <h2 id="form-heading">Cadastrar Nova Partida</h2>
+        <span id="form-mode-badge" class="badge badge-novo">Novo Registro</span>
+      </div>
+
+      <form id="form-partida" novalidate>
+        <input type="hidden" id="partida-id" name="partidaId" value="">
+
+        <div class="form-group">
+          <label for="jogador-brancas">
+            Jogador das Brancas <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="jogador-brancas" 
+            name="jogadorBrancas" 
+            required 
+            placeholder="Ex.: Magnus Carlsen"
+            autocomplete="off"
+          >
+          <small class="field-help">Informe o nome do enxadrista jogando com as brancas.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="jogador-pretas">
+            Jogador das Pretas <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="jogador-pretas" 
+            name="jogadorPretas" 
+            required 
+            placeholder="Ex.: Hikaru Nakamura"
+            autocomplete="off"
+          >
+          <small class="field-help">Informe o nome do enxadrista jogando com as pretas.</small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="resultado">
+              Resultado <span class="required" aria-hidden="true">*</span>
+            </label>
+            <select id="resultado" name="resultado" required>
+              <option value="">Selecione o resultado</option>
+              <option value="1-0">1-0 (Vitória das Brancas)</option>
+              <option value="0-1">0-1 (Vitória das Pretas)</option>
+              <option value="1/2-1/2">1/2-1/2 (Empate)</option>
+              <option value="*">* (Em andamento / Não definido)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="status">
+              Status <span class="required" aria-hidden="true">*</span>
+            </label>
+            <select id="status" name="status" required>
+              <option value="">Selecione o status</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Finalizada">Finalizada</option>
+              <option value="Pendente">Pendente</option>
+              <option value="Interrompida">Interrompida</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" id="btn-submit" class="btn btn-primary">
+            <span id="btn-submit-icon" aria-hidden="true">✚</span>
+            <span id="btn-submit-text">Adicionar Partida</span>
+          </button>
+          <button type="button" id="btn-cancelar" class="btn btn-secondary">
+            Limpar Formulário
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Painel de Listagem de Partidas -->
+    <section class="card list-section" aria-labelledby="list-heading">
+      <div class="card-header list-header">
+        <div>
+          <h2 id="list-heading">Partidas Cadastradas</h2>
+          <p class="section-desc">Visualização da lista simulada de partidas.</p>
+        </div>
+        <div class="list-header-actions">
+          <span id="contador-partidas" class="badge badge-info">0 partidas</span>
+          <button type="button" id="btn-restaurar-dados" class="btn btn-sm btn-ghost" title="Restaura os dados iniciais de demonstração">
+            Restaurar Padrão
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" aria-describedby="list-heading">
+          <thead>
+            <tr>
+              <th scope="col" class="col-id">ID</th>
+              <th scope="col">Brancas</th>
+              <th scope="col">Pretas</th>
+              <th scope="col" class="col-res">Resultado</th>
+              <th scope="col" class="col-status">Status</th>
+              <th scope="col" class="col-acoes text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-partidas-corpo">
+            <!-- Linhas geradas dinamicamente via app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="empty-state" class="empty-state" hidden>
+        <span class="empty-icon" aria-hidden="true">♙</span>
+        <p>Nenhuma partida encontrada no estado local de demonstração.</p>
+        <button type="button" id="btn-empty-restore" class="btn btn-sm btn-primary">
+          Recarregar dados de exemplo
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <p>Interface de Demonstração Visual • Trabalho AP1 • Tecnologias: HTML, CSS e JavaScript puros</p>
+      <p class="footer-note">Ambiente estático isolado - Operações realizadas em memória local.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
