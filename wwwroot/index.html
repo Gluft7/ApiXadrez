@@ -3,40 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demonstração - Gestão de Partidas de Xadrez</title>
+  <title>Arena Xadrez - Gestão de Partidas</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Barra de aviso de ambiente simulado -->
-  <aside class="demo-disclaimer" role="note" aria-label="Aviso de ambiente de demonstração">
-    <div class="container disclaimer-content">
-      <span class="badge-demo">MODO DE DEMONSTRAÇÃO</span>
-      <p>
-        <strong>Atenção:</strong> Esta interface utiliza exclusivamente dados fictícios em memória local.
-        <strong>Nenhuma requisição é enviada ao backend/API.</strong>
-      </p>
-    </div>
-  </aside>
-
+  <!-- Cabeçalho Principal -->
   <header class="app-header">
     <div class="container header-content">
       <div class="brand">
         <span class="brand-icon" aria-hidden="true">♟</span>
         <div>
           <h1>Arena Xadrez</h1>
-          <p class="subtitle">Protótipo Visual de Gerenciamento de Partidas (AP1)</p>
+          <p class="subtitle">Sistema de Gestão de Partidas de Xadrez (AP2 — SQLite)</p>
         </div>
+      </div>
+      <div id="api-status-badge" class="api-status-badge status-checking" title="Status da comunicação com o backend">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="api-status-text">Conectando ao banco...</span>
       </div>
     </div>
   </header>
 
   <main class="container main-layout">
 
-    <!-- Área de feedback acessível -->
+    <!-- Área de feedback de mensagens acessível (aria-live) -->
     <div id="feedback-area" class="feedback-area" role="status" aria-live="polite"></div>
 
-    <!-- Painel do Formulário (Adicionar / Editar) -->
+    <!-- Painel do Formulário (Cadastrar / Editar Partida) -->
     <section class="card form-section" aria-labelledby="form-heading">
       <div class="card-header">
         <h2 id="form-heading">Cadastrar Nova Partida</h2>
@@ -58,7 +52,7 @@
             placeholder="Ex.: Magnus Carlsen"
             autocomplete="off"
           >
-          <small class="field-help">Informe o nome do enxadrista jogando com as brancas.</small>
+          <small class="field-help">Informe o nome do enxadrista com as peças brancas.</small>
         </div>
 
         <div class="form-group">
@@ -73,7 +67,7 @@
             placeholder="Ex.: Hikaru Nakamura"
             autocomplete="off"
           >
-          <small class="field-help">Informe o nome do enxadrista jogando com as pretas.</small>
+          <small class="field-help">Informe o nome do enxadrista com as peças pretas.</small>
         </div>
 
         <div class="form-row">
@@ -107,7 +101,7 @@
         <div class="form-actions">
           <button type="submit" id="btn-submit" class="btn btn-primary">
             <span id="btn-submit-icon" aria-hidden="true">✚</span>
-            <span id="btn-submit-text">Adicionar Partida</span>
+            <span id="btn-submit-text">Cadastrar Partida</span>
           </button>
           <button type="button" id="btn-cancelar" class="btn btn-secondary">
             Limpar Formulário
@@ -116,22 +110,61 @@
       </form>
     </section>
 
-    <!-- Painel de Listagem de Partidas -->
+    <!-- Painel de Listagem e Consulta de Partidas -->
     <section class="card list-section" aria-labelledby="list-heading">
       <div class="card-header list-header">
         <div>
           <h2 id="list-heading">Partidas Cadastradas</h2>
-          <p class="section-desc">Visualização da lista simulada de partidas.</p>
+          <p class="section-desc">Persistência real no SQLite (<code>/api/partidas</code>).</p>
         </div>
         <div class="list-header-actions">
           <span id="contador-partidas" class="badge badge-info">0 partidas</span>
-          <button type="button" id="btn-restaurar-dados" class="btn btn-sm btn-ghost" title="Restaura os dados iniciais de demonstração">
-            Restaurar Padrão
+          <button type="button" id="btn-recarregar" class="btn btn-sm btn-secondary" title="Sincronizar dados com o banco SQLite">
+            <span aria-hidden="true">🔄</span> Sincronizar
           </button>
         </div>
       </div>
 
-      <div class="table-responsive">
+      <!-- Barra de Consulta por ID (endpoint GET /api/partidas/{id}) -->
+      <div class="query-bar">
+        <label for="input-busca-id" class="query-label">Consultar por ID:</label>
+        <div class="query-controls">
+          <input 
+            type="number" 
+            id="input-busca-id" 
+            class="input-query-id" 
+            min="1" 
+            placeholder="Ex.: 1 ou 999"
+            aria-label="Buscar partida pelo ID"
+          >
+          <button type="button" id="btn-buscar-id" class="btn btn-sm btn-secondary">
+            Buscar
+          </button>
+          <button type="button" id="btn-limpar-busca" class="btn btn-sm btn-ghost" title="Limpar filtro e exibir todas as partidas" hidden>
+            ✕ Mostrar Todas
+          </button>
+        </div>
+      </div>
+
+      <!-- Indicador de Carregamento -->
+      <div id="loading-indicator" class="state-container loading-state" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Carregando partidas do banco de dados...</p>
+      </div>
+
+      <!-- Mensagem de Erro de Conexão -->
+      <div id="connection-error" class="state-container error-state" hidden>
+        <span class="state-icon" aria-hidden="true">⚠️</span>
+        <h3>Falha de Conexão com a API</h3>
+        <p id="connection-error-msg">Não foi possível conectar ao servidor backend em <code>/api/partidas</code>.</p>
+        <p class="error-tip">Certifique-se de que a API está em execução (ex: <code>dotnet run --urls http://localhost:5050</code>).</p>
+        <button type="button" id="btn-tentar-novamente" class="btn btn-sm btn-primary">
+          Tentar Novamente
+        </button>
+      </div>
+
+      <!-- Tabela de Partidas -->
+      <div class="table-responsive" id="table-container">
         <table class="data-table" aria-describedby="list-heading">
           <thead>
             <tr>
@@ -149,12 +182,11 @@
         </table>
       </div>
 
+      <!-- Estado Vazio -->
       <div id="empty-state" class="empty-state" hidden>
         <span class="empty-icon" aria-hidden="true">♙</span>
-        <p>Nenhuma partida encontrada no estado local de demonstração.</p>
-        <button type="button" id="btn-empty-restore" class="btn btn-sm btn-primary">
-          Recarregar dados de exemplo
-        </button>
+        <p id="empty-state-title">Nenhuma partida encontrada no sistema.</p>
+        <small class="field-help" id="empty-state-help">Utilize o formulário ao lado para cadastrar a primeira partida.</small>
       </div>
     </section>
 
@@ -162,8 +194,8 @@
 
   <footer class="app-footer">
     <div class="container footer-content">
-      <p>Interface de Demonstração Visual • Trabalho AP1 • Tecnologias: HTML, CSS e JavaScript puros</p>
-      <p class="footer-note">Ambiente estático isolado - Operações realizadas em memória local.</p>
+      <p>Arena Xadrez • Trabalho AP2 • Entity Framework Core + SQLite</p>
+      <p class="footer-note">Persistência real em banco de dados SQLite (<code>xadrez.db</code>). Registros preservados após reiniciar a API.</p>
     </div>
   </footer>
 

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Arena Xadrez - Interface de Demonstração (CSS Puro)
+   Arena Xadrez - Interface AP2 (CSS Puro)
    Sem dependências, sem bibliotecas externas e sem CDNs.
    ========================================================================== */
 
@@ -21,6 +21,7 @@
   --chess-accent-hover: #1d4ed8;
 
   /* Estados e feedback */
+  --color-success: #16a34a;
   --color-success-bg: #ecfdf5;
   --color-success-border: #a7f3d0;
   --color-success-text: #065f46;
@@ -31,6 +32,7 @@
   --color-danger-border: #fecaca;
   --color-danger-text: #991b1b;
 
+  --color-warning: #eab308;
   --color-warning-bg: #fffbeb;
   --color-warning-border: #fde68a;
   --color-warning-text: #92400e;
@@ -77,36 +79,9 @@ body {
 
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 0 1.25rem;
-}
-
-/* Banner de Demonstração */
-.demo-disclaimer {
-  background-color: #1e293b;
-  color: #f8fafc;
-  font-size: 0.875rem;
-  padding: 0.625rem 0;
-  border-bottom: 2px solid #334155;
-}
-
-.disclaimer-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.badge-demo {
-  background-color: #f59e0b;
-  color: #78350f;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius-sm);
-  text-transform: uppercase;
 }
 
 /* Cabeçalho */
@@ -115,6 +90,14 @@ body {
   border-bottom: 1px solid var(--color-border);
   padding: 1.25rem 0;
   box-shadow: var(--shadow-sm);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .brand {
@@ -139,6 +122,57 @@ body {
   color: var(--color-text-muted);
 }
 
+/* Badge de Conexão com a API */
+.api-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-muted);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-online {
+  border-color: var(--color-success-border);
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.status-online .status-dot {
+  background-color: var(--color-success);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.status-offline {
+  border-color: var(--color-danger-border);
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+.status-offline .status-dot {
+  background-color: var(--color-danger);
+}
+
+.status-checking {
+  border-color: var(--color-warning-border);
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.status-checking .status-dot {
+  background-color: var(--color-warning);
+}
+
 /* Layout Principal */
 .main-layout {
   flex: 1;
@@ -149,9 +183,9 @@ body {
   gap: 1.5rem;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 960px) {
   .main-layout {
-    grid-template-columns: 380px 1fr;
+    grid-template-columns: 390px 1fr;
     align-items: start;
   }
 
@@ -247,6 +281,13 @@ body {
   margin-top: 0.2rem;
 }
 
+.section-desc code {
+  background-color: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
 /* Formulário */
 .form-group {
   margin-bottom: 1.15rem;
@@ -284,6 +325,7 @@ label {
 }
 
 input[type="text"],
+input[type="number"],
 select {
   width: 100%;
   padding: 0.625rem 0.75rem;
@@ -296,21 +338,23 @@ select {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-input[type="text"]::placeholder {
+input[type="text"]::placeholder,
+input[type="number"]::placeholder {
   color: #94a3b8;
 }
 
 input[type="text"]:hover,
+input[type="number"]:hover,
 select:hover {
   border-color: #94a3b8;
 }
 
 input[type="text"]:focus,
+input[type="number"]:focus,
 select:focus {
   border-color: var(--chess-accent);
 }
 
-/* Validação visual de campo inválido */
 input.input-invalid,
 select.input-invalid {
   border-color: var(--color-danger);
@@ -351,8 +395,13 @@ select.input-invalid {
   white-space: nowrap;
 }
 
-.btn:active {
+.btn:active:not(:disabled) {
   transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -360,7 +409,7 @@ select.input-invalid {
   color: var(--chess-light);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: #3f3f46;
 }
 
@@ -370,7 +419,7 @@ select.input-invalid {
   color: var(--color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background-color: #e2e8f0;
 }
 
@@ -379,7 +428,7 @@ select.input-invalid {
   color: #ffffff;
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
   background-color: var(--color-danger-hover);
 }
 
@@ -389,7 +438,7 @@ select.input-invalid {
   color: var(--color-text-muted);
 }
 
-.btn-ghost:hover {
+.btn-ghost:hover:not(:disabled) {
   background-color: var(--color-surface-muted);
   color: var(--color-text);
 }
@@ -445,6 +494,39 @@ select.input-invalid {
   color: #991b1b;
 }
 
+/* Barra de Consulta por ID */
+.query-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: var(--color-surface-muted);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.query-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin-bottom: 0;
+}
+
+.query-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+}
+
+.input-query-id {
+  max-width: 130px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+}
+
 /* Tabela de Dados */
 .list-header {
   flex-wrap: wrap;
@@ -460,7 +542,6 @@ select.input-invalid {
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  margin-top: 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -497,6 +578,7 @@ select.input-invalid {
 
 .data-table tbody tr.row-selected {
   background-color: #eff6ff;
+  border-left: 3px solid var(--chess-accent);
 }
 
 .col-id {
@@ -544,7 +626,55 @@ select.input-invalid {
   line-height: 1;
 }
 
-/* Estado Vazio */
+/* Estados de Carregamento e Vazio */
+.state-container {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-muted);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border-dark);
+  margin-bottom: 1rem;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--chess-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 0.75rem auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-state {
+  border-color: var(--color-danger-border);
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+.error-state h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.state-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.error-tip {
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  opacity: 0.85;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem 1.5rem;
@@ -559,7 +689,7 @@ select.input-invalid {
 }
 
 .empty-state p {
-  margin-bottom: 1rem;
+  margin-bottom: 0.25rem;
   font-size: 0.95rem;
 }
 

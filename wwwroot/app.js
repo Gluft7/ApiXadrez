@@ -1,52 +1,34 @@
 /**
  * ==========================================================================
- * Arena Xadrez - Interface de Demonstração (JavaScript Puro)
+ * Arena Xadrez - Integração Frontend com a API Real e SQLite (AP2)
+ * Tecnologias: HTML, CSS e JavaScript puros (vanilla)
  * 
- * ATENÇÃO:
- * - Esta aplicação opera em modo de demonstração isolado.
- * - Todos os dados são simulados em memória no navegador.
- * - NENHUMA conexão de rede / requisição HTTP é feita com o backend/API.
+ * Comunicação direta com a API REST ASP.NET Core + Entity Framework Core:
+ * - GET    /api/partidas       -> Listar partidas do SQLite
+ * - GET    /api/partidas/{id}  -> Consultar partida por ID (200 ou 404)
+ * - POST   /api/partidas       -> Cadastrar nova partida (201 Created)
+ * - PUT    /api/partidas/{id}  -> Atualizar partida existente (200 OK)
+ * - DELETE /api/partidas/{id}  -> Excluir partida (204 No Content)
  * ==========================================================================
  */
 
 'use strict';
 
 (function () {
-  // Dados fictícios iniciais para a demonstração
-  const DADOS_INICIAIS = [
-    {
-      id: 1,
-      jogadorBrancas: "Magnus Carlsen",
-      jogadorPretas: "Hikaru Nakamura",
-      resultado: "1-0",
-      status: "Finalizada"
-    },
-    {
-      id: 2,
-      jogadorBrancas: "Fabiano Caruana",
-      jogadorPretas: "Ian Nepomniachtchi",
-      resultado: "0-1",
-      status: "Finalizada"
-    },
-    {
-      id: 3,
-      jogadorBrancas: "Ding Liren",
-      jogadorPretas: "Gukesh D",
-      resultado: "1/2-1/2",
-      status: "Finalizada"
-    },
-    {
-      id: 4,
-      jogadorBrancas: "Alireza Firouzja",
-      jogadorPretas: "Praggnanandhaa R",
-      resultado: "*",
-      status: "Em andamento"
-    }
-  ];
+  // Configuração da URL Base da API:
+  // Se estiver sendo servido via HTTP/HTTPS pelo próprio ASP.NET Core, utiliza a origem atual.
+  // Caso o arquivo index.html seja aberto diretamente (ex: file://), utiliza a porta padrão 5050.
+  const API_BASE_URL = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+    ? window.location.origin
+    : 'http://localhost:5050';
 
-  // Estado local em memória (mutável durante a sessão)
-  let partidas = JSON.parse(JSON.stringify(DADOS_INICIAIS));
+  const ENDPOINT_PARTIDAS = `${API_BASE_URL}/api/partidas`;
+
+  // Estado da Aplicação
+  let partidasAtuais = [];
   let partidaEmEdicaoId = null;
+  let filtroIdAtivo = null;
+  let feedbackTimeout = null;
 
   // Elementos do DOM
   let formPartida;
@@ -61,14 +43,25 @@
   let btnCancelar;
   let formHeading;
   let formModeBadge;
+
   let tabelaCorpo;
+  let tableContainer;
   let emptyState;
+  let emptyStateTitle;
+  let emptyStateHelp;
+  let loadingIndicator;
+  let connectionError;
+  let connectionErrorMsg;
   let contadorPartidas;
   let feedbackArea;
-  let btnRestaurar;
-  let btnEmptyRestore;
 
-  let feedbackTimeout = null;
+  let btnRecarregar;
+  let btnTentarNovamente;
+  let inputBuscaId;
+  let btnBuscarId;
+  let btnLimparBusca;
+  let apiStatusBadge;
+  let apiStatusText;
 
   /**
    * Inicialização do ciclo de vida da interface
@@ -76,12 +69,11 @@
   document.addEventListener('DOMContentLoaded', () => {
     mapearElementosDOM();
     vincularEventos();
-    renderizarTabela();
-    exibirMensagem('Interface de demonstração carregada com dados locais simulados.', 'info');
+    carregarPartidasAPI();
   });
 
   /**
-   * Mapeamento de referências do DOM
+   * Mapeamento dos nós do DOM
    */
   function mapearElementosDOM() {
     formPartida = document.getElementById('form-partida');
@@ -100,29 +92,61 @@
     formModeBadge = document.getElementById('form-mode-badge');
 
     tabelaCorpo = document.getElementById('tabela-partidas-corpo');
+    tableContainer = document.getElementById('table-container');
     emptyState = document.getElementById('empty-state');
+    emptyStateTitle = document.getElementById('empty-state-title');
+    emptyStateHelp = document.getElementById('empty-state-help');
+    loadingIndicator = document.getElementById('loading-indicator');
+    connectionError = document.getElementById('connection-error');
+    connectionErrorMsg = document.getElementById('connection-error-msg');
     contadorPartidas = document.getElementById('contador-partidas');
     feedbackArea = document.getElementById('feedback-area');
 
-    btnRestaurar = document.getElementById('btn-restaurar-dados');
-    btnEmptyRestore = document.getElementById('btn-empty-restore');
+    btnRecarregar = document.getElementById('btn-recarregar');
+    btnTentarNovamente = document.getElementById('btn-tentar-novamente');
+    inputBuscaId = document.getElementById('input-busca-id');
+    btnBuscarId = document.getElementById('btn-buscar-id');
+    btnLimparBusca = document.getElementById('btn-limpar-busca');
+
+    apiStatusBadge = document.getElementById('api-status-badge');
+    apiStatusText = document.getElementById('api-status-text');
   }
 
   /**
-   * Registro de eventos do usuário
+   * Registro dos ouvintes de eventos
    */
   function vincularEventos() {
     formPartida.addEventListener('submit', lidarSubmissaoFormulario);
     btnCancelar.addEventListener('click', limparECancelarEdicao);
 
-    if (btnRestaurar) {
-      btnRestaurar.addEventListener('click', restaurarDadosIniciais);
-    }
-    if (btnEmptyRestore) {
-      btnEmptyRestore.addEventListener('click', restaurarDadosIniciais);
-    }
+    btnRecarregar.addEventListener('click', () => {
+      filtroIdAtivo = null;
+      if (inputBuscaId) inputBuscaId.value = '';
+      if (btnLimparBusca) btnLimparBusca.hidden = true;
+      carregarPartidasAPI();
+    });
 
-    // Delegação de eventos para botões da tabela (Editar / Excluir)
+    btnTentarNovamente.addEventListener('click', () => {
+      carregarPartidasAPI();
+    });
+
+    btnBuscarId.addEventListener('click', consultarPorId);
+    inputBuscaId.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        consultarPorId();
+      }
+    });
+
+    btnLimparBusca.addEventListener('click', () => {
+      filtroIdAtivo = null;
+      inputBuscaId.value = '';
+      btnLimparBusca.hidden = true;
+      renderizarTabela(partidasAtuais);
+      exibirMensagem('Exibindo todas as partidas cadastradas no SQLite.', 'info');
+    });
+
+    // Delegação de eventos para botões de ação na tabela (Editar / Excluir)
     tabelaCorpo.addEventListener('click', (event) => {
       const target = event.target.closest('button[data-action]');
       if (!target) return;
@@ -139,22 +163,331 @@
   }
 
   /**
-   * Renderiza a lista de partidas na tabela
+   * =========================================================================
+   * OPERAÇÕES COM A API REAL (EF CORE + SQLITE)
+   * =========================================================================
    */
-  function renderizarTabela() {
-    tabelaCorpo.innerHTML = '';
 
-    const total = partidas.length;
-    contadorPartidas.textContent = total === 1 ? '1 partida' : `${total} partidas`;
+  /**
+   * GET /api/partidas - Lista todas as partidas persistidas no SQLite
+   */
+  async function carregarPartidasAPI() {
+    exibirCarregando(true);
+    ocultarErroConexao();
 
-    if (total === 0) {
-      emptyState.hidden = false;
+    try {
+      const response = await fetch(ENDPOINT_PARTIDAS, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const dados = await response.json();
+      partidasAtuais = Array.isArray(dados) ? dados : [];
+
+      atualizarStatusAPI(true);
+      renderizarTabela(partidasAtuais);
+      exibirMensagem('Partidas sincronizadas com o banco SQLite com sucesso.', 'info');
+    } catch (erro) {
+      console.error('Falha ao carregar partidas da API:', erro);
+      atualizarStatusAPI(false);
+      exibirErroConexao(`Não foi possível conectar à API em ${ENDPOINT_PARTIDAS}. (${erro.message})`);
+    } finally {
+      exibirCarregando(false);
+    }
+  }
+
+  /**
+   * GET /api/partidas/{id} - Consulta uma partida específica por ID (Existente ou Inexistente)
+   */
+  async function consultarPorId() {
+    const idValor = inputBuscaId.value.trim();
+    if (!idValor) {
+      exibirMensagem('Informe um número de ID para consultar.', 'erro');
+      inputBuscaId.focus();
       return;
     }
 
+    const id = parseInt(idValor, 10);
+    if (isNaN(id) || id <= 0) {
+      exibirMensagem('O ID deve ser um número inteiro positivo.', 'erro');
+      inputBuscaId.focus();
+      return;
+    }
+
+    exibirCarregando(true);
+    ocultarErroConexao();
+
+    try {
+      const response = await fetch(`${ENDPOINT_PARTIDAS}/${id}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.status === 404) {
+        filtroIdAtivo = id;
+        btnLimparBusca.hidden = false;
+        renderizarTabela(
+          [],
+          `Partida #${id} não encontrada no banco SQLite (404 Not Found).`,
+          'O registro não existe ou já foi excluído. Clique em "Mostrar Todas" para restaurar a lista.'
+        );
+        exibirMensagem(`Aviso: Partida #${id} não foi encontrada no banco de dados (HTTP 404).`, 'erro');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const partida = await response.json();
+      filtroIdAtivo = id;
+      btnLimparBusca.hidden = false;
+
+      // Renderiza apenas a partida consultada
+      renderizarTabela([partida]);
+      exibirMensagem(`Partida #${partida.id} localizada com sucesso no banco SQLite!`, 'sucesso');
+    } catch (erro) {
+      console.error(`Erro ao consultar partida #${id}:`, erro);
+      exibirMensagem(`Erro ao consultar partida #${id}: ${erro.message}`, 'erro');
+    } finally {
+      exibirCarregando(false);
+    }
+  }
+
+  /**
+   * Trata a submissão do formulário (POST para criar ou PUT para atualizar)
+   */
+  async function lidarSubmissaoFormulario(event) {
+    event.preventDefault();
+
+    const jogadorBrancas = inputBrancas.value.trim();
+    const jogadorPretas = inputPretas.value.trim();
+    const resultado = selectResultado.value;
+    const status = selectStatus.value;
+
+    // Validação nos campos obrigatórios
+    if (!jogadorBrancas || !jogadorPretas || !resultado || !status) {
+      exibirMensagem('Por favor, preencha todos os campos obrigatórios (*).', 'erro');
+      marcarCamposInvalidos({ jogadorBrancas, jogadorPretas, resultado, status });
+      return;
+    }
+
+    removerMarcacoesInvalidas();
+
+    const payload = {
+      jogadorBrancas,
+      jogadorPretas,
+      resultado,
+      status
+    };
+
+    desabilitarFormulario(true);
+
+    try {
+      if (partidaEmEdicaoId !== null) {
+        // PUT /api/partidas/{id}
+        await atualizarPartidaAPI(partidaEmEdicaoId, payload);
+      } else {
+        // POST /api/partidas
+        await cadastrarPartidaAPI(payload);
+      }
+    } catch (erro) {
+      console.error('Erro na operação com o formulário:', erro);
+      exibirMensagem(`Erro na operação: ${erro.message}`, 'erro');
+    } finally {
+      desabilitarFormulario(false);
+    }
+  }
+
+  /**
+   * POST /api/partidas - Cadastra nova partida no SQLite
+   */
+  async function cadastrarPartidaAPI(payload) {
+    const response = await fetch(ENDPOINT_PARTIDAS, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok && response.status !== 201) {
+      throw new Error(`Falha ao cadastrar partida (HTTP ${response.status})`);
+    }
+
+    const novaPartida = await response.json();
+    exibirMensagem(`Partida #${novaPartida.id} salva com sucesso no banco de dados SQLite!`, 'sucesso');
+
+    limparECancelarEdicao();
+    await carregarPartidasAPI();
+  }
+
+  /**
+   * PUT /api/partidas/{id} - Atualiza partida existente no SQLite
+   */
+  async function atualizarPartidaAPI(id, payload) {
+    const response = await fetch(`${ENDPOINT_PARTIDAS}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.status === 404) {
+      throw new Error(`Partida #${id} não encontrada no banco SQLite para atualização.`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Falha ao atualizar partida (HTTP ${response.status})`);
+    }
+
+    const partidaAtualizada = await response.json();
+    exibirMensagem(`Partida #${partidaAtualizada.id} atualizada com sucesso no banco SQLite!`, 'sucesso');
+
+    limparECancelarEdicao();
+    await carregarPartidasAPI();
+  }
+
+  /**
+   * DELETE /api/partidas/{id} - Remove partida do SQLite
+   */
+  async function confirmarExclusao(id) {
+    const partida = partidasAtuais.find(p => p.id === id);
+    const descricao = partida ? ` (${partida.jogadorBrancas} vs ${partida.jogadorPretas})` : '';
+
+    const confirmou = window.confirm(
+      `Deseja realmente excluir a partida #${id}${descricao} permanentemente do banco SQLite?`
+    );
+
+    if (!confirmou) return;
+
+    exibirCarregando(true);
+
+    try {
+      const response = await fetch(`${ENDPOINT_PARTIDAS}/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.status === 404) {
+        throw new Error(`Partida #${id} não encontrada no banco SQLite.`);
+      }
+
+      if (!response.ok && response.status !== 204) {
+        throw new Error(`Falha ao excluir partida (HTTP ${response.status})`);
+      }
+
+      exibirMensagem(`Partida #${id} excluída permanentemente do banco SQLite!`, 'sucesso');
+
+      if (partidaEmEdicaoId === id) {
+        limparECancelarEdicao();
+      }
+
+      await carregarPartidasAPI();
+    } catch (erro) {
+      console.error(`Erro ao excluir partida #${id}:`, erro);
+      exibirMensagem(`Erro ao excluir partida: ${erro.message}`, 'erro');
+    } finally {
+      exibirCarregando(false);
+    }
+  }
+
+  /**
+   * =========================================================================
+   * MANIPULAÇÃO VISUAL E RENDERIZAÇÃO
+   * =========================================================================
+   */
+
+  /**
+   * Prepara o formulário para edição da partida selecionada
+   */
+  async function iniciarEdicao(id) {
+    try {
+      // Busca os dados mais recentes diretamente do banco para garantir integridade
+      const response = await fetch(`${ENDPOINT_PARTIDAS}/${id}`);
+      if (!response.ok) {
+        throw new Error(`Partida #${id} não encontrada no banco.`);
+      }
+
+      const partida = await response.json();
+
+      partidaEmEdicaoId = partida.id;
+      inputId.value = partida.id;
+      inputBrancas.value = partida.jogadorBrancas;
+      inputPretas.value = partida.jogadorPretas;
+      selectResultado.value = partida.resultado;
+      selectStatus.value = partida.status;
+
+      // Atualiza os elementos visuais do formulário
+      formHeading.textContent = `Editar Partida #${partida.id}`;
+      formModeBadge.textContent = 'Modo Edição';
+      formModeBadge.className = 'badge badge-editando';
+
+      btnSubmitText.textContent = 'Salvar Alterações';
+      btnSubmitIcon.textContent = '✔';
+      btnCancelar.textContent = 'Cancelar Edição';
+
+      removerMarcacoesInvalidas();
+      renderizarTabela(filtroIdAtivo ? [partida] : partidasAtuais);
+
+      inputBrancas.focus();
+      exibirMensagem(`Carregados os dados da partida #${partida.id} do banco para edição.`, 'info');
+    } catch (erro) {
+      exibirMensagem(`Não foi possível carregar os dados da partida para edição: ${erro.message}`, 'erro');
+    }
+  }
+
+  /**
+   * Limpa o formulário e retorna ao modo de cadastro
+   */
+  function limparECancelarEdicao() {
+    partidaEmEdicaoId = null;
+    formPartida.reset();
+    inputId.value = '';
+
+    formHeading.textContent = 'Cadastrar Nova Partida';
+    formModeBadge.textContent = 'Novo Registro';
+    formModeBadge.className = 'badge badge-novo';
+
+    btnSubmitText.textContent = 'Cadastrar Partida';
+    btnSubmitIcon.textContent = '✚';
+    btnCancelar.textContent = 'Limpar Formulário';
+
+    removerMarcacoesInvalidas();
+    renderizarTabela(filtroIdAtivo ? partidasAtuais.filter(p => p.id === filtroIdAtivo) : partidasAtuais);
+  }
+
+  /**
+   * Renderiza a lista de partidas na tabela
+   */
+  function renderizarTabela(lista, msgTitulo, msgAjuda) {
+    tabelaCorpo.innerHTML = '';
+
+    const total = lista.length;
+    contadorPartidas.textContent = total === 1 ? '1 partida' : `${total} partidas`;
+
+    if (total === 0) {
+      tableContainer.hidden = true;
+      emptyState.hidden = false;
+      if (emptyStateTitle) emptyStateTitle.textContent = msgTitulo || 'Nenhuma partida encontrada no sistema.';
+      if (emptyStateHelp) emptyStateHelp.textContent = msgAjuda || 'Utilize o formulário ao lado para cadastrar a primeira partida.';
+      return;
+    }
+
+    tableContainer.hidden = false;
     emptyState.hidden = true;
 
-    partidas.forEach((partida) => {
+    lista.forEach((partida) => {
       const tr = document.createElement('tr');
       if (partidaEmEdicaoId === partida.id) {
         tr.classList.add('row-selected');
@@ -187,7 +520,7 @@
               class="btn btn-sm btn-secondary" 
               data-action="edit" 
               data-id="${partida.id}"
-              aria-label="Visualizar e editar partida ${partida.id}"
+              aria-label="Editar partida ${partida.id}"
             >
               Editar
             </button>
@@ -209,148 +542,60 @@
   }
 
   /**
-   * Trata o envio do formulário (Criação ou Atualização)
+   * Atualiza o badge de status da API no cabeçalho
    */
-  function lidarSubmissaoFormulario(event) {
-    event.preventDefault();
-
-    const jogadorBrancas = inputBrancas.value.trim();
-    const jogadorPretas = inputPretas.value.trim();
-    const resultado = selectResultado.value;
-    const status = selectStatus.value;
-
-    // Validações básicas visuais
-    if (!jogadorBrancas || !jogadorPretas || !resultado || !status) {
-      exibirMensagem('Por favor, preencha todos os campos obrigatórios.', 'erro');
-      marcarCamposInvalidos({ jogadorBrancas, jogadorPretas, resultado, status });
-      return;
-    }
-
-    removerMarcacoesInvalidas();
-
-    if (partidaEmEdicaoId !== null) {
-      // Atualização
-      const indice = partidas.findIndex(p => p.id === partidaEmEdicaoId);
-      if (indice !== -1) {
-        partidas[indice] = {
-          id: partidaEmEdicaoId,
-          jogadorBrancas,
-          jogadorPretas,
-          resultado,
-          status
-        };
-
-        exibirMensagem(`Partida #${partidaEmEdicaoId} atualizada com sucesso no estado local.`, 'sucesso');
-      }
+  function atualizarStatusAPI(conectado) {
+    if (conectado) {
+      apiStatusBadge.className = 'api-status-badge status-online';
+      apiStatusText.textContent = 'SQLite Conectado';
     } else {
-      // Inclusão de nova partida com ID auto-incrementado simulado
-      const proximoId = partidas.length > 0 ? Math.max(...partidas.map(p => p.id)) + 1 : 1;
-
-      const novaPartida = {
-        id: proximoId,
-        jogadorBrancas,
-        jogadorPretas,
-        resultado,
-        status
-      };
-
-      partidas.push(novaPartida);
-      exibirMensagem(`Nova partida #${proximoId} adicionada com sucesso no estado local.`, 'sucesso');
+      apiStatusBadge.className = 'api-status-badge status-offline';
+      apiStatusText.textContent = 'API Desconectada';
     }
-
-    limparECancelarEdicao();
-    renderizarTabela();
   }
 
   /**
-   * Prepara o formulário para edição da partida selecionada
+   * Controla o indicador de carregamento
    */
-  function iniciarEdicao(id) {
-    const partida = partidas.find(p => p.id === id);
-    if (!partida) {
-      exibirMensagem(`Partida #${id} não encontrada.`, 'erro');
-      return;
+  function exibirCarregando(carregando) {
+    if (loadingIndicator) {
+      loadingIndicator.hidden = !carregando;
     }
-
-    partidaEmEdicaoId = partida.id;
-    inputId.value = partida.id;
-    inputBrancas.value = partida.jogadorBrancas;
-    inputPretas.value = partida.jogadorPretas;
-    selectResultado.value = partida.resultado;
-    selectStatus.value = partida.status;
-
-    // Ajusta a interface visual para modo de edição
-    formHeading.textContent = `Editar Partida #${partida.id}`;
-    formModeBadge.textContent = 'Modo Edição';
-    formModeBadge.className = 'badge badge-editando';
-
-    btnSubmitText.textContent = 'Salvar Alterações';
-    btnSubmitIcon.textContent = '✔';
-    btnCancelar.textContent = 'Cancelar Edição';
-
-    removerMarcacoesInvalidas();
-    renderizarTabela();
-
-    inputBrancas.focus();
-    exibirMensagem(`Carregados os dados da partida #${partida.id} para edição visual.`, 'info');
-  }
-
-  /**
-   * Exclusão da partida no estado local
-   */
-  function confirmarExclusao(id) {
-    const partida = partidas.find(p => p.id === id);
-    if (!partida) return;
-
-    const confirmou = window.confirm(
-      `Deseja realmente remover a partida #${id} (${partida.jogadorBrancas} vs ${partida.jogadorPretas}) da demonstração local?`
-    );
-
-    if (!confirmou) return;
-
-    partidas = partidas.filter(p => p.id !== id);
-
-    // Se estiver editando a mesma partida que foi excluída, limpa o formulário
-    if (partidaEmEdicaoId === id) {
-      limparECancelarEdicao();
+    if (btnRecarregar) {
+      btnRecarregar.disabled = carregando;
     }
+  }
 
-    renderizarTabela();
-    exibirMensagem(`Partida #${id} removida com sucesso do estado local.`, 'sucesso');
+  function exibirErroConexao(mensagem) {
+    if (connectionError) {
+      connectionError.hidden = false;
+      if (connectionErrorMsg) connectionErrorMsg.textContent = mensagem;
+    }
+    if (tableContainer) tableContainer.hidden = true;
+    if (emptyState) emptyState.hidden = true;
+  }
+
+  function ocultarErroConexao() {
+    if (connectionError) connectionError.hidden = true;
+  }
+
+  function desabilitarFormulario(desabilitado) {
+    btnSubmit.disabled = desabilitado;
+    btnCancelar.disabled = desabilitado;
+    inputBrancas.disabled = desabilitado;
+    inputPretas.disabled = desabilitado;
+    selectResultado.disabled = desabilitado;
+    selectStatus.disabled = desabilitado;
+
+    if (desabilitado) {
+      btnSubmitText.textContent = 'Gravando no banco...';
+    } else {
+      btnSubmitText.textContent = partidaEmEdicaoId !== null ? 'Salvar Alterações' : 'Cadastrar Partida';
+    }
   }
 
   /**
-   * Retorna o formulário ao modo de cadastro inicial
-   */
-  function limparECancelarEdicao() {
-    partidaEmEdicaoId = null;
-    formPartida.reset();
-    inputId.value = '';
-
-    formHeading.textContent = 'Cadastrar Nova Partida';
-    formModeBadge.textContent = 'Novo Registro';
-    formModeBadge.className = 'badge badge-novo';
-
-    btnSubmitText.textContent = 'Adicionar Partida';
-    btnSubmitIcon.textContent = '✚';
-    btnCancelar.textContent = 'Limpar Formulário';
-
-    removerMarcacoesInvalidas();
-    renderizarTabela();
-  }
-
-  /**
-   * Restaura os dados iniciais pré-definidos
-   */
-  function restaurarDadosIniciais() {
-    partidas = JSON.parse(JSON.stringify(DADOS_INICIAIS));
-    limparECancelarEdicao();
-    renderizarTabela();
-    exibirMensagem('Dados de exemplo restaurados com sucesso.', 'info');
-  }
-
-  /**
-   * Exibe mensagens de feedback com suporte a leitores de tela
+   * Exibição de alertas dinâmicos
    */
   function exibirMensagem(texto, tipo = 'info') {
     if (feedbackTimeout) {
@@ -379,15 +624,11 @@
       });
     }
 
-    // Ocultar automaticamente após 6 segundos
     feedbackTimeout = setTimeout(() => {
       feedbackArea.innerHTML = '';
     }, 6000);
   }
 
-  /**
-   * Marcação de campos com erro visual
-   */
   function marcarCamposInvalidos(valores) {
     if (!valores.jogadorBrancas) inputBrancas.classList.add('input-invalid');
     if (!valores.jogadorPretas) inputPretas.classList.add('input-invalid');
@@ -401,9 +642,6 @@
     });
   }
 
-  /**
-   * Mapeamento de classe CSS para badge de status
-   */
   function obterClasseStatus(status) {
     switch (status) {
       case 'Finalizada':
@@ -419,9 +657,6 @@
     }
   }
 
-  /**
-   * Prevenção de XSS simples para renderização segura
-   */
   function escaparHtml(str) {
     if (typeof str !== 'string') return str;
     return str
