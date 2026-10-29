@@ -1,36 +1,17 @@
-/**
- * ==========================================================================
- * Arena Xadrez - Integração Frontend com a API Real e SQLite (AP2)
- * Tecnologias: HTML, CSS e JavaScript puros (vanilla)
- * 
- * Comunicação direta com a API REST ASP.NET Core + Entity Framework Core:
- * - GET    /api/partidas       -> Listar partidas do SQLite
- * - GET    /api/partidas/{id}  -> Consultar partida por ID (200 ou 404)
- * - POST   /api/partidas       -> Cadastrar nova partida (201 Created)
- * - PUT    /api/partidas/{id}  -> Atualizar partida existente (200 OK)
- * - DELETE /api/partidas/{id}  -> Excluir partida (204 No Content)
- * ==========================================================================
- */
-
 'use strict';
 
 (function () {
-  // Configuração da URL Base da API:
-  // Se estiver sendo servido via HTTP/HTTPS pelo próprio ASP.NET Core, utiliza a origem atual.
-  // Caso o arquivo index.html seja aberto diretamente (ex: file://), utiliza a porta padrão 5050.
   const API_BASE_URL = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
     ? window.location.origin
     : 'http://localhost:5050';
 
   const ENDPOINT_PARTIDAS = `${API_BASE_URL}/api/partidas`;
 
-  // Estado da Aplicação
   let partidasAtuais = [];
   let partidaEmEdicaoId = null;
   let filtroIdAtivo = null;
   let feedbackTimeout = null;
 
-  // Elementos do DOM
   let formPartida;
   let inputId;
   let inputBrancas;
@@ -63,18 +44,13 @@
   let apiStatusBadge;
   let apiStatusText;
 
-  /**
-   * Inicialização do ciclo de vida da interface
-   */
   document.addEventListener('DOMContentLoaded', () => {
     mapearElementosDOM();
     vincularEventos();
     carregarPartidasAPI();
   });
 
-  /**
-   * Mapeamento dos nós do DOM
-   */
+
   function mapearElementosDOM() {
     formPartida = document.getElementById('form-partida');
     inputId = document.getElementById('partida-id');
@@ -112,9 +88,6 @@
     apiStatusText = document.getElementById('api-status-text');
   }
 
-  /**
-   * Registro dos ouvintes de eventos
-   */
   function vincularEventos() {
     formPartida.addEventListener('submit', lidarSubmissaoFormulario);
     btnCancelar.addEventListener('click', limparECancelarEdicao);

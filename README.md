@@ -148,7 +148,7 @@ A pasta `bruno/ApiXadrezBruno` contém a coleção de testes pronta:
 
 ## Vídeo de demonstração — AP2
 
-[LINK PÚBLICO DO VÍDEO AQUI]
+(https://youtu.be/qIBNyNw4twc)
 
 ---
 
