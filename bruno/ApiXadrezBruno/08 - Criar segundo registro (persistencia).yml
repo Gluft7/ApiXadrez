@@ -1,0 +1,25 @@
+info:
+  name: 08 - Criar segundo registro (persistencia)
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/partidas"
+  body:
+    type: json
+    data: |-
+      {
+        "jogadorBrancas": "Ding Liren",
+        "jogadorPretas": "Gukesh D",
+        "resultado": "1/2-1/2",
+        "status": "Finalizada"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

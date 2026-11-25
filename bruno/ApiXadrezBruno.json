@@ -1,0 +1,251 @@
+{
+  "info": {
+    "name": "ApiXadrezBruno",
+    "description": "Collection de testes para a Avaliação Semestral (AS) da API de Xadrez",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - API no ar",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "description": "Verifica se a API está online respondendo HTTP 200",
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": []
+        }
+      }
+    },
+    {
+      "name": "01 - Listar registros",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "description": "Lista todas as partidas existentes no banco SQLite",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas"
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 - Criar registro",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Cadastra uma nova partida (ID 3)",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jogadorBrancas\": \"Garry Kasparov\",\n  \"jogadorPretas\": \"Viswanathan Anand\",\n  \"resultado\": \"1/2-1/2\",\n  \"status\": \"Finalizada\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "03 - Consultar pelo ID criado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "description": "Consulta o registro recém-criado (ID 3) para confirmar a inserção",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas/3",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Atualizar registro",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Atualiza os dados da partida criada (ID 3)",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas/3",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas",
+            "3"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jogadorBrancas\": \"Garry Kasparov\",\n  \"jogadorPretas\": \"Viswanathan Anand\",\n  \"resultado\": \"1-0\",\n  \"status\": \"Finalizada\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "05 - Confirmar atualizacao",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "description": "Consulta novamente o registro (ID 3) para confirmar a atualização",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas/3",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Excluir registro",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "description": "Exclui a partida ID 3 permanentemente do banco SQLite (esperado: 204 NoContent)",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas/3",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - Consultar registro excluido (404)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "description": "Consulta o registro excluído (ID 3) para confirmar retorno 404 Not Found",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas/3",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Criar segundo registro (persistencia)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Cadastra um segundo registro (ID 4) que deve permanecer após reiniciar a aplicação",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jogadorBrancas\": \"Ding Liren\",\n  \"jogadorPretas\": \"Gukesh D\",\n  \"resultado\": \"1/2-1/2\",\n  \"status\": \"Finalizada\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "09 - Verificar persistencia apos reiniciar",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "description": "Consulta o segundo registro (ID 4) após reiniciar a API para comprovar persistência",
+        "url": {
+          "raw": "{{baseUrl}}/api/partidas/4",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "partidas",
+            "4"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5050",
+      "type": "default"
+    }
+  ]
+}
